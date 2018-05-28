@@ -13,7 +13,7 @@ help(){
 # $1: rpm file
 exact_rpm_to_path(){
 	echo "exact" $1 "to" $2 "==>"
-	rpm2cpio $1 | cpio -imvd
+	rpm2cpio $1 | cpio -imvd &>/dev/null
 }
 
 while getopts "s:l:h" arg
@@ -52,7 +52,10 @@ do
 		echo "rpm "\"${fn}\" "is not found"
 		exit 1
 	else
-		exact_rpm_to_path ${rpm_path}/${fn}-[0-9]* 
+		exact_rpm_to_path ${rpm_path}/${fn}-[0-9]*
+		if [ -f ${rpm_path}/${fn}-bin-[0-9]* ];then
+			exact_rpm_to_path ${rpm_path}/${fn}-bin-[0-9]*
+		fi 
 	fi
 done 
 
