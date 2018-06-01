@@ -1,0 +1,57 @@
+filesystem
+bash-bin
+systemd
+	libc6
+		clr-systemd-config-data
+		nss-altfiles-lib
+	Linux-PAM
+	kmod-lib
+		kmod-data
+	util-linux-lib
+		util-linux-data
+	libgcc1
+	libcap
+	acl-lib
+	cryptsetup-lib
+	LVM2-lib-extra
+	libgcrypt-lib
+	libgpg-error-lib
+		libgpg-error-data
+	systemd-console	
+	iptables-extras
+systemd-bootchart-config
+systemd-libs
+
+util-linux
+	util-linux-autostart
+	util-linux-bin
+		util-linux-config
+		util-linux-data
+		util-linux-setuid
+		zlib-lib
+		libcap-ng-lib
+		ncurses-lib
+			ncurses-data
+		readline-lib
+			readline-data
+	util-linux-doc
+	util-linux-lib
+		util-linux-data
+	util-linux-locales
+	util-linux-python
+		util-linux-python3
+shadow
+cracklib-data
+cracklib-lib
+dist-pam-configs
+ 
+ncurses-lib-narrow
+coreutils-bin
+	libcap
+	gmp-lib
+	acl-lib
+	attr-lib	
+
+
+
+
