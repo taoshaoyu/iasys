@@ -13,7 +13,7 @@ help(){
 # $1: rpm file
 exact_rpm_to_path(){
 	echo "exact" $1 "to" $2 "==>"
-	rpm2cpio $1 | cpio -imvd &>/dev/null
+	rpm2cpio $1 | cpio -imvd --extract-over-symlinks &>/dev/null
 }
 
 while getopts "s:l:h" arg
