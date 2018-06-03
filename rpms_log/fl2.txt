@@ -52,6 +52,7 @@ coreutils-bin
 	acl-lib
 	attr-lib	
 
-
+grep-bin
+	pcre-lib
 
 
