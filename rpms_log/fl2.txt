@@ -55,4 +55,104 @@ coreutils-bin
 grep-bin
 	pcre-lib
 
+dbus-autostart
+dbus-bin
+	dbus-config
+	dbus-data
+	dbus-lib
+	expat-lib
+clr-boot-manager-autostart
+clr-boot-manager-bin
+	clr-boot-manager-config
+	efivar-lib
+clr-power-tweaks
+	clr-power-tweaks-autostart
+	clr-power-tweaks-bin
+	clr-power-tweaks-config
+pacrunner
+	pacrunner-autostart
+	pacrunner-bin
+		curl-lib
+			openssl-lib
+				p11-kit
+					ca-certs
+						clrtrust
+							clrtrust-bin
+							openssl
+					findutils
+						findutils-bin
+						findutils-doc
+						findutils-locales
+					p11-kit-bin
+						p11-kit-lib
+							libffi-lib
+						libtasn1-lib
+					p11-kit-data
+					p11-kit-doc
+			krb5-lib
+				krb5-data
+				e2fsprogs-lib
+					e2fsprogs-data
+				openldap-lib
+					openldap-data
+			nghttp2-lib
+				nghttp2-data
+			zlib-lib
+		glib-lib
+			glib-data
+			util-linux-lib
+		pacrunner-lib
+		pacrunner-config
+		pacrunner-data
 
+clr-systemd-config-autostart
+clr-systemd-config-config
+
+clutter-doc
+libgpg-error-dev
+gawk-bin
+nss-altfiles
+swupd-client
+LVM2-dev
+btrfs-progs-dev
+cryptsetup-dev
+util-linux-dev
+libarchive-dev
+netbase
+e2fsprogs-bin
+ca-certs-static
+bsdiff-dev
+efibootmgr-bin
+nettle-lib
+glibc-utils
+kmod-bin
+clr-update-triggers
+gcc-dev
+swupd-client-extras
+bzip2
+nano-data
+swupd-overdue
+bsdiff-lib
+iproute2-data
+audit-lib
+clr-service-restart-config
+acl-dev
+tar-bin
+btrfs-progs
+procps-ng-bin
+tzdata-minimal
+btrfs-progs-lib
+libarchive-lib
+pigz-bin
+xz-bin
+clr-hardware-files
+iproute2-bin
+nano-bin
+swupd-client-config
+clr-service-restart-bin
+swupd-client-doc
+bzip2-lib
+gzip-bin
+hostname-bin
+sed-bin
+pcre-dev	
