@@ -1,0 +1,17 @@
+systemd
+	glibc
+	libselinux
+	libcap
+	pam
+	audit-libs
+	kmod-libs
+	libmount
+	libgcc
+	pcre
+	libattr
+	libcap-ng
+	xz-libs
+	zlib
+	libblkid
+	libuuid
+	util-linux
