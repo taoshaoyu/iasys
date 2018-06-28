@@ -1,0 +1,409 @@
+===check script in rpm setup-2.8.71-9.el7.noarch.rpm =====
+postinstall scriptlet (using <lua>):
+for i, name in ipairs({"passwd", "shadow", "group", "gshadow"}) do
+     os.remove("/etc/"..name..".rpmnew")
+end
+if posix.access("/usr/bin/newaliases", "x") then
+  os.execute("/usr/bin/newaliases >/dev/null")
+end
+===check script in rpm basesystem-10.0-7.el7.centos.noarch.rpm =====
+===check script in rpm systemd-219-57.el7.armv7hl.rpm =====
+preinstall scriptlet (using /bin/sh):
+getent group cdrom >/dev/null 2>&1 || groupadd -r -g 11 cdrom >/dev/null 2>&1 || :
+getent group utmp >/dev/null 2>&1 || groupadd -r -g 22 utmp >/dev/null 2>&1 || :
+getent group tape >/dev/null 2>&1 || groupadd -r -g 33 tape >/dev/null 2>&1 || :
+getent group dialout >/dev/null 2>&1 || groupadd -r -g 18 dialout >/dev/null 2>&1 || :
+getent group input >/dev/null 2>&1 || groupadd -r input >/dev/null 2>&1 || :
+getent group floppy >/dev/null 2>&1 || groupadd -r -g 19 floppy >/dev/null 2>&1 || :
+getent group systemd-journal >/dev/null 2>&1 || groupadd -r -g 190 systemd-journal 2>&1 || :
+getent group systemd-network >/dev/null 2>&1 || groupadd -r -g 192 systemd-network 2>&1 || :
+getent passwd systemd-network >/dev/null 2>&1 || useradd -r -u 192 -l -g systemd-network -d / -s /sbin/nologin -c "systemd Network Management" systemd-network >/dev/null 2>&1 || :
+
+systemctl stop systemd-udevd-control.socket systemd-udevd-kernel.socket systemd-udevd.service >/dev/null 2>&1 || :
+postinstall scriptlet (using /bin/sh):
+systemd-machine-id-setup >/dev/null 2>&1 || :
+/usr/lib/systemd/systemd-random-seed save >/dev/null 2>&1 || :
+systemctl daemon-reexec >/dev/null 2>&1 || :
+systemctl start systemd-udevd.service >/dev/null 2>&1 || :
+udevadm hwdb --update >/dev/null 2>&1 || :
+journalctl --update-catalog >/dev/null 2>&1 || :
+systemd-tmpfiles --create >/dev/null 2>&1 || :
+
+# Make sure new journal files will be owned by the "systemd-journal" group
+chgrp systemd-journal /run/log/journal/ /run/log/journal/`cat /etc/machine-id 2> /dev/null` /var/log/journal/ /var/log/journal/`cat /etc/machine-id 2> /dev/null` >/dev/null 2>&1 || :
+chmod g+s /run/log/journal/ /run/log/journal/`cat /etc/machine-id 2> /dev/null` /var/log/journal/ /var/log/journal/`cat /etc/machine-id 2> /dev/null` >/dev/null 2>&1 || :
+
+if [ $1 -eq 1 ] ; then
+    # Try to read default runlevel from the old inittab if it exists
+    runlevel=$(awk -F ':' '$3 == "initdefault" && $1 !~ "^#" { print $2 }' /etc/inittab 2> /dev/null)
+    if [ -z "$runlevel" ] ; then
+        target="/usr/lib/systemd/system/graphical.target"
+    else
+        target="/usr/lib/systemd/system/runlevel$runlevel.target"
+    fi
+
+    # And symlink what we found to the new-style default.target
+    ln -sf "$target" /etc/systemd/system/default.target >/dev/null 2>&1 || :
+
+    # Services we install by default, and which are controlled by presets.
+    systemctl preset \
+        remote-fs.target \
+        getty@.service \
+        serial-getty@.service \
+        console-getty.service \
+        console-shell.service \
+        debug-shell.service \
+        systemd-readahead-replay.service \
+        systemd-readahead-collect.service \
+        >/dev/null 2>&1 || :
+else
+    # This systemd service does not exist anymore, we now do it
+    # internally in PID 1
+    rm -f /etc/systemd/system/sysinit.target.wants/hwclock-load.service >/dev/null 2>&1 || :
+
+    # This systemd target does not exist anymore. It's been replaced
+    # by ntp-units.d.
+    rm -f /etc/systemd/system/multi-user.target.wants/systemd-timedated-ntp.target >/dev/null 2>&1 || :
+
+    # Enable the units recorded by %pretrans
+    if [ -e /var/lib/rpm-state/systemd/ntp-units ] ; then
+        while read service; do
+            systemctl enable "$service" >/dev/null 2>&1 || :
+        done < /var/lib/rpm-state/systemd/ntp-units
+        rm -r /var/lib/rpm-state/systemd/ntp-units >/dev/null 2>&1 || :
+    fi
+fi
+
+# Move old stuff around in /var/lib
+mv /var/lib/random-seed /var/lib/systemd/random-seed >/dev/null 2>&1 || :
+mv /var/lib/backlight /var/lib/systemd/backlight >/dev/null 2>&1 || :
+
+# Migrate /etc/sysconfig/clock
+if [ ! -L /etc/localtime -a -e /etc/sysconfig/clock ] ; then
+    . /etc/sysconfig/clock >/dev/null 2>&1 || :
+    if [ -n "$ZONE" -a -e "/usr/share/zoneinfo/$ZONE" ] ; then
+        ln -sf "../usr/share/zoneinfo/$ZONE" /etc/localtime >/dev/null 2>&1 || :
+    fi
+fi
+rm -f /etc/sysconfig/clock >/dev/null 2>&1 || :
+
+# Migrate /etc/sysconfig/i18n
+if [ -e /etc/sysconfig/i18n -a ! -e /etc/locale.conf ]; then
+    unset LANG
+    unset LC_CTYPE
+    unset LC_NUMERIC
+    unset LC_TIME
+    unset LC_COLLATE
+    unset LC_MONETARY
+    unset LC_MESSAGES
+    unset LC_PAPER
+    unset LC_NAME
+    unset LC_ADDRESS
+    unset LC_TELEPHONE
+    unset LC_MEASUREMENT
+    unset LC_IDENTIFICATION
+    . /etc/sysconfig/i18n >/dev/null 2>&1 || :
+    [ -n "$LANG" ] && echo LANG=$LANG > /etc/locale.conf 2>&1 || :
+    [ -n "$LC_CTYPE" ] && echo LC_CTYPE=$LC_CTYPE >> /etc/locale.conf 2>&1 || :
+    [ -n "$LC_NUMERIC" ] && echo LC_NUMERIC=$LC_NUMERIC >> /etc/locale.conf 2>&1 || :
+    [ -n "$LC_TIME" ] && echo LC_TIME=$LC_TIME >> /etc/locale.conf 2>&1 || :
+    [ -n "$LC_COLLATE" ] && echo LC_COLLATE=$LC_COLLATE >> /etc/locale.conf 2>&1 || :
+    [ -n "$LC_MONETARY" ] && echo LC_MONETARY=$LC_MONETARY >> /etc/locale.conf 2>&1 || :
+    [ -n "$LC_MESSAGES" ] && echo LC_MESSAGES=$LC_MESSAGES >> /etc/locale.conf 2>&1 || :
+    [ -n "$LC_PAPER" ] && echo LC_PAPER=$LC_PAPER >> /etc/locale.conf 2>&1 || :
+    [ -n "$LC_NAME" ] && echo LC_NAME=$LC_NAME >> /etc/locale.conf 2>&1 || :
+    [ -n "$LC_ADDRESS" ] && echo LC_ADDRESS=$LC_ADDRESS >> /etc/locale.conf 2>&1 || :
+    [ -n "$LC_TELEPHONE" ] && echo LC_TELEPHONE=$LC_TELEPHONE >> /etc/locale.conf 2>&1 || :
+    [ -n "$LC_MEASUREMENT" ] && echo LC_MEASUREMENT=$LC_MEASUREMENT >> /etc/locale.conf 2>&1 || :
+    [ -n "$LC_IDENTIFICATION" ] && echo LC_IDENTIFICATION=$LC_IDENTIFICATION >> /etc/locale.conf 2>&1 || :
+fi
+
+# Migrate /etc/sysconfig/keyboard
+if [ -e /etc/sysconfig/keyboard -a ! -e /etc/vconsole.conf ]; then
+    unset SYSFONT
+    unset SYSFONTACM
+    unset UNIMAP
+    unset KEYMAP
+    [ -e /etc/sysconfig/i18n ] && . /etc/sysconfig/i18n >/dev/null 2>&1 || :
+    . /etc/sysconfig/keyboard >/dev/null 2>&1 || :
+    [ -n "$SYSFONT" ] && echo FONT=$SYSFONT > /etc/vconsole.conf 2>&1 || :
+    [ -n "$SYSFONTACM" ] && echo FONT_MAP=$SYSFONTACM >> /etc/vconsole.conf 2>&1 || :
+    [ -n "$UNIMAP" ] && echo FONT_UNIMAP=$UNIMAP >> /etc/vconsole.conf 2>&1 || :
+    [ -n "$KEYTABLE" ] && echo KEYMAP=$KEYTABLE >> /etc/vconsole.conf 2>&1 || :
+fi
+rm -f /etc/sysconfig/i18n >/dev/null 2>&1 || :
+rm -f /etc/sysconfig/keyboard >/dev/null 2>&1 || :
+
+# Migrate HOSTNAME= from /etc/sysconfig/network
+if [ -e /etc/sysconfig/network -a ! -e /etc/hostname ]; then
+    unset HOSTNAME
+    . /etc/sysconfig/network >/dev/null 2>&1 || :
+    [ -n "$HOSTNAME" ] && echo $HOSTNAME > /etc/hostname 2>&1 || :
+fi
+sed -i '/^HOSTNAME=/d' /etc/sysconfig/network >/dev/null 2>&1 || :
+
+# Migrate the old systemd-setup-keyboard X11 configuration fragment
+if [ ! -e /etc/X11/xorg.conf.d/00-keyboard.conf ] ; then
+    mv /etc/X11/xorg.conf.d/00-system-setup-keyboard.conf /etc/X11/xorg.conf.d/00-keyboard.conf >/dev/null 2>&1 || :
+else
+    rm -f /etc/X11/xorg.conf.d/00-system-setup-keyboard.conf >/dev/null 2>&1 || :
+fi
+
+# sed-fu to add myhostname to the hosts line of /etc/nsswitch.conf
+# Only do that when installing, not when updating.
+if [ $1 -eq 1 -a -f /etc/nsswitch.conf ] ; then
+    sed -i.bak -e '
+/^hosts:/ !b
+/\<myhostname\>/ b
+s/[[:blank:]]*$/ myhostname/
+' /etc/nsswitch.conf >/dev/null 2>&1 || :
+fi
+preuninstall scriptlet (using /bin/sh):
+if [ $1 -eq 0 ] ; then
+    systemctl disable \
+        remote-fs.target \
+        getty@.service \
+        serial-getty@.service \
+        console-getty.service \
+        console-shell.service \
+        debug-shell.service \
+        systemd-readahead-replay.service \
+        systemd-readahead-collect.service \
+        >/dev/null 2>&1 || :
+
+    rm -f /etc/systemd/system/default.target >/dev/null 2>&1 || :
+
+    if [ -f /etc/nsswitch.conf ] ; then
+        sed -i.bak -e '
+/^hosts:/ !b
+s/[[:blank:]]\+myhostname\>//
+' /etc/nsswitch.conf >/dev/null 2>&1 || :
+    fi
+fi
+postuninstall scriptlet (using /bin/sh):
+if [ $1 -ge 1 ] ; then
+    systemctl daemon-reload > /dev/null 2>&1 || :
+fi
+posttrans scriptlet (using /bin/sh):
+# Convert old /etc/sysconfig/desktop settings
+preferred=
+if [ -f /etc/sysconfig/desktop ]; then
+    . /etc/sysconfig/desktop
+    if [ "$DISPLAYMANAGER" = GNOME ]; then
+        preferred=gdm
+    elif [ "$DISPLAYMANAGER" = KDE ]; then
+        preferred=kdm
+    elif [ "$DISPLAYMANAGER" = WDM ]; then
+        preferred=wdm
+    elif [ "$DISPLAYMANAGER" = XDM ]; then
+        preferred=xdm
+    elif [ -n "$DISPLAYMANAGER" ]; then
+        preferred=${DISPLAYMANAGER##*/}
+    fi
+fi
+if [ -z "$preferred" ]; then
+    if [ -x /usr/sbin/gdm ]; then
+        preferred=gdm
+    elif [ -x /usr/bin/kdm ]; then
+        preferred=kdm
+    fi
+fi
+if [ $1 -eq 1 -a -n "$preferred" -a -r "/usr/lib/systemd/system/$preferred.service" ]; then
+    # This is supposed to fail when the symlink already exists
+    ln -s "/usr/lib/systemd/system/$preferred.service" /etc/systemd/system/display-manager.service >/dev/null 2>&1 || :
+fi
+===check script in rpm glibc-2.17-222.el7.armv7hl.rpm =====
+preinstall scriptlet (using <lua>):
+-- Check that the running kernel is new enough
+required = '2.6.32'
+rel = posix.uname("%r")
+if rpm.vercmp(rel, required) < 0 then
+  error("FATAL: kernel too old", 0)
+end
+postinstall program: /usr/sbin/glibc_post_upgrade.armv7hl
+postuninstall program: /sbin/ldconfig
+===check script in rpm libselinux-2.5-12.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm libcap-2.22-9.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm pam-1.1.8-22.el7.armv7hl.rpm =====
+postinstall scriptlet (using /bin/sh):
+/sbin/ldconfig
+if [ ! -e /var/log/tallylog ] ; then
+	/usr/bin/install -m 600 /dev/null /var/log/tallylog
+fi
+postuninstall program: /sbin/ldconfig
+===check script in rpm audit-libs-2.8.1-3.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm kmod-libs-20-21.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm libmount-2.23.2-52.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm libgcc-4.8.5-28.el7.armv7hl.rpm =====
+postinstall scriptlet (using <lua>):
+if posix.access ("/sbin/ldconfig", "x") then
+  local pid = posix.fork ()
+  if pid == 0 then
+    posix.exec ("/sbin/ldconfig")
+  elseif pid ~= -1 then
+    posix.wait (pid)
+  end
+end
+postuninstall scriptlet (using <lua>):
+if posix.access ("/sbin/ldconfig", "x") then
+  local pid = posix.fork ()
+  if pid == 0 then
+    posix.exec ("/sbin/ldconfig")
+  elseif pid ~= -1 then
+    posix.wait (pid)
+  end
+end
+===check script in rpm pcre-8.32-17.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm libattr-2.4.46-13.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm libcap-ng-0.7.5-4.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm xz-libs-5.2.2-1.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm zlib-1.2.7-17.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm libblkid-2.23.2-52.el7.armv7hl.rpm =====
+postinstall scriptlet (using /bin/sh):
+/sbin/ldconfig
+
+### Move blkid cache to /run
+[ -d /run/blkid ] || mkdir -p /run/blkid
+for I in /etc/blkid.tab /etc/blkid.tab.old \
+         /etc/blkid/blkid.tab /etc/blkid/blkid.tab.old; do
+
+	if [ -f "$I" ]; then
+		mv "$I" /run/blkid/ || :
+	fi
+done
+postuninstall program: /sbin/ldconfig
+===check script in rpm libuuid-2.23.2-52.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm nss-softokn-freebl-3.34.0-2.el7.armv7hl.rpm =====
+===check script in rpm util-linux-2.23.2-52.el7.armv7hl.rpm =====
+postinstall scriptlet (using /bin/sh):
+# only for minimal buildroots without /var/log
+[ -d /var/log ] || mkdir -p /var/log
+touch /var/log/lastlog
+chown root:root /var/log/lastlog
+chmod 0644 /var/log/lastlog
+# Fix the file context, do not use restorecon
+if [ -x /usr/sbin/selinuxenabled ] && /usr/sbin/selinuxenabled; then
+	SECXT=$( /usr/sbin/matchpathcon -n /var/log/lastlog 2> /dev/null )
+	if [ -n "$SECXT" ]; then
+		# Selinux enabled, but without policy? It's true for buildroots
+		# without selinux stuff on host machine with enabled selinux.
+		# We don't want to use any RPM dependence on selinux policy for
+		# matchpathcon(2). SELinux policy should be optional.
+		/usr/bin/chcon "$SECXT"  /var/log/lastlog >/dev/null 2>&1 || :
+	fi
+fi
+if [ ! -L /etc/mtab ]; then
+	ln -sf ../proc/self/mounts /etc/mtab || :
+fi
+===check script in rpm libacl-2.2.51-14.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm lz4-1.7.5-2.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm libgcrypt-1.5.3-14.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm systemd-libs-219-57.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm libgpg-error-1.12-3.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm qrencode-libs-3.4.1-3.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm libpwquality-1.2.3-5.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm cracklib-2.9.0-11.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm bash-4.2.46-30.el7.armv7hl.rpm =====
+postinstall scriptlet (using <lua>):
+nl        = '\n'
+sh        = '/bin/sh'..nl
+bash      = '/bin/bash'..nl
+f = io.open('/etc/shells', 'a+')
+if f then
+  local shells = nl..f:read('*all')..nl
+  if not shells:find(nl..sh) then f:write(sh) end
+  if not shells:find(nl..bash) then f:write(bash) end
+  f:close()
+end
+postuninstall scriptlet (using <lua>):
+-- Run it only if we are uninstalling
+if arg[2] == "0"
+then
+  t={}
+  for line in io.lines("/etc/shells")
+  do
+    if line ~= "/bin/bash" and line ~= "/bin/sh"
+    then
+      table.insert(t,line)
+    end
+  end
+
+  f = io.open("/etc/shells", "w+")
+  for n,line in pairs(t)
+  do
+    f:write(line.."\n")
+  end
+  f:close()
+end
+===check script in rpm ncurses-libs-5.9-14.20130511.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm dbus-1.10.24-7.el7.armv7hl.rpm =====
+preinstall scriptlet (using /bin/sh):
+# Add the "dbus" user and group
+/usr/sbin/groupadd -r -g 81 dbus 2>/dev/null || :
+/usr/sbin/useradd -c 'System message bus' -u 81 -g 81 \
+    -s /sbin/nologin -r -d '/' dbus 2> /dev/null || :
+preuninstall scriptlet (using /bin/sh):
+
+if [ $1 -eq 0 ] ; then 
+        # Package removal, not upgrade 
+        systemctl --no-reload disable stop dbus.service dbus.socket > /dev/null 2>&1 || : 
+        systemctl stop stop dbus.service dbus.socket > /dev/null 2>&1 || : 
+fi
+postuninstall scriptlet (using /bin/sh):
+
+systemctl daemon-reload >/dev/null 2>&1 || :
+===check script in rpm dbus-libs-1.10.24-7.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm expat-2.1.0-10.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm elfutils-libs-0.170-4.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm elfutils-libelf-0.170-4.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig
+===check script in rpm bzip2-libs-1.0.6-13.el7.armv7hl.rpm =====
+postinstall program: /sbin/ldconfig
+postuninstall program: /sbin/ldconfig

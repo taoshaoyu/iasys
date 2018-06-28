@@ -72,7 +72,7 @@ l_deps_form_3 = list( filter( test_filter_form3, (set(l_deps_all) - set(l_deps_f
 
 l_deps_char=[]
 for i in range(26):
-	l_deps_char.append(test_find_by_char( chr(i+ord('a') ), s_deps_all))
+	l_deps_char.append(test_find_by_char( chr(i+ord('a') ), l_deps_all))
 
 
 '''
@@ -199,4 +199,7 @@ def foo(l):
 
 
 #  line.split('.el7')[0]
+d_pak_to_dep = dict()
+for item in r:
+	d_pak_to_dep[item[0].split('.el7')[0]] =  filter_deps(item[2])
 

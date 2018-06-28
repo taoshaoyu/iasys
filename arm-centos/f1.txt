@@ -1,17 +1,98 @@
+setup
+basesystem
 systemd
+	systemd-sysv
 	glibc
+		glibc-common
+			tzdata
+		nss-softokn-freebl
+			nspr
+			nss-util
+			nss
+		libgcc
 	libselinux
 	libcap
 	pam
+		libpwquality
+			cracklib
 	audit-libs
 	kmod-libs
 	libmount
 	libgcc
 	pcre
+		libstdc++
 	libattr
 	libcap-ng
 	xz-libs
 	zlib
 	libblkid
 	libuuid
+	systemd-libs
+		libgpg-error
+		elfutils-libs
+			elfutils-libelf
+		libgcrypt
+		lz4
+		qrencode-libs
+			libpng
+kmod
 	util-linux
+		coreutils
+			gmp	
+			ncurses	
+	bash
+		ncurses-devel
+			ncurses-libs
+	acl
+	libacl
+
+shadow-utils
+	libsemanage
+	libsepol
+	ustr
+
+dbus
+	dbus-libs
+	expat
+	bzip2-libs
+	at-spi
+strace
+
+authconfig
+pam_krb5
+pam_pkcs11
+cracklib-dicts
+passwd
+	libuser
+	glib2
+	glib2-devel
+	popt
+	libffi
+
+certmonger
+ca-certificates
+libcap
+libcgroup-pam
+libpwquality
+nss-pam-ldapd
+
+pam_krb5
+pam_snapper
+pam-devel
+pam_pkcs11
+pam_ssh_agent_auth
+evolution-spamassassin     
+libcgroup-pam    
+fprintd-pam                
+mod_authnz_pam   
+spamassassin
+
+nss-pam-ldapd
+gnome-keyring-pam
+pam_snapper
+
+centos-userland-release
+
+nscd
+
+procps-ng

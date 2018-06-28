@@ -1,0 +1,38 @@
+setup
+basesystem
+systemd
+	glibc       
+	libselinux         
+	libcap         
+	pam     
+	audit-libs         
+	kmod-libs         
+	libmount
+    libgcc         
+    pcre     
+    libattr         
+    libcap-ng         
+    xz-libs         
+    zlib         
+    libblkid         
+    libuuid
+    nss-softokn-freebl
+util-linux
+	libacl
+    lz4
+    libgcrypt
+systemd-libs
+    libgpg-error
+    qrencode-libs
+libpwquality
+	cracklib
+bash
+	ncurses-libs
+dbus
+	dbus-libs
+	expat
+	elfutils-libs
+	elfutils-libelf
+	bzip2-libs
+coreutils
+	
